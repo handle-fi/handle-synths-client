@@ -1,6 +1,33 @@
 [package]
-name = "handle_synths_client"
+name = "handle-synths-client"
 version = "0.1.0"
 edition = "2021"
 
+# TODO: implement interface-only feature
+[features]
+default = []
+interface-only = []
+
 [dependencies]
+pws = { git = "https://github.com/rellfy/pws.git" }
+clap = { version = "4.3.5", features = ["derive"] }
+ethers = { version = "2.0", features = ["ws"] }
+eyre = "0.6.8"
+tokio = { version = "1", features = ["full"] }
+futures = "0.3.28"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+dotenv = "0.15.0"
+bigdecimal = { version = "0.4.1", features = ["serde"] }
+tokio-tungstenite = { version = "0.19", features = ["native-tls"] }
+log = "0.4.19"
+env_logger = "0.10.0"
+thiserror = "1.0"
+url = "2.4.0"
+futures-channel = "0.3.28"
+bigdecimal-ethers-ext = "0.2.*"
+uuid = { version = "1.9.1", features = ["v4", "v7", "fast-rng", "serde"] }
+
+[build-dependencies]
+ethers = { version = "2.0" }
+eyre = "0.6.8"

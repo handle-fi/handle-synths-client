@@ -1,0 +1,32 @@
+{
+  "arbitrum-sepolia": {
+    "rpc": "https://arb-sepolia.g.alchemy.com/v2/6VWMGS0uDkY1P5MzVtHNL8PgFCvjme6Q",
+    "subgraph": "https://api.studio.thegraph.com/query/50984/handle-synths-arb-sepolia/version/latest",
+    "usd": "0xe5B75EcA86d4E855a65Af3D95A3aCe1679f2850d",
+    "account": "0x51111c9714D06f8eCE692a402df1C36F17B0556a",
+    "beacon": "0x04112CC28893481eb3c66eD80E215cF3A1d88572",
+    "liquidityTokenFactory": "0x28639edcfA5D40E68d20C40011AB464204674440",
+    "liquidityPool": "0x78FCbB30441AcB2FA3603AC6Ab8bF0272D96ca2D",
+    "treasury": "0x3B1E655a8b0b32954F4065149F5381E4112dfd73"
+  },
+  "arbitrum-one": {
+    "rpc": "https://arb-mainnet.g.alchemy.com/v2/5Bo_0zVLbRUYcpW7EAn-sSwHv8Htmqwz",
+    "subgraph": "https://subgraph.satsuma-prod.com/76eeac078c25/handle-fi/handle-synths/api",
+    "usd": "0x8616E8EA83f048ab9A5eC513c9412Dd2993bcE3F",
+    "account": "0x5A5C7CBA24bF276f06563f7dD43517E7a9e234Df",
+    "beacon": "0x94688ce7187d1a8331a98ca9A84BeaAf1550C9b0",
+    "liquidityTokenFactory": "0x096d48ac073d0739F59b95857A38D9F940B2588E",
+    "liquidityPool": "0x0DC29dD7d8d685257c3C8eaf153B3ce3b936f58D",
+    "treasury": "0x5CE8dDD04F3576C93eDdDf0eb58bf2c7f643Ad0A"
+  },
+  "base": {
+    "rpc": "https://base-mainnet.g.alchemy.com/v2/r_VB1K-QyxDicigKedOZ2C0XFabKJpbO",
+    "subgraph": "https://subgraph.satsuma-prod.com/74cffd796027/gtrader--787933/gtrader-subgraph/api",
+    "usd": "0xe5F396Fe5B1539789E47734d77AB5c39A5C84BA5",
+    "account": "0xA0F452f5eb6669e7a4A0d8c290C358D11264b598",
+    "beacon": "0x63EC8F10a3aE8D959DAa7Ae21449717786d516cB",
+    "liquidityTokenFactory": "0x75918C575F6d79D80C11eF6B8D6464c5D0A852E3",
+    "liquidityPool": "0xB3e1d750e89F0330fD6C3C00f9181523D8b96e82",
+    "treasury": "0x0CAb6B079c10BeB6b9684F6533532eD12d66Da38"
+  }
+}

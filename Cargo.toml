@@ -3,7 +3,6 @@ name = "handle-synths-client"
 version = "0.1.0"
 edition = "2021"
 
-# TODO: implement interface-only feature
 [features]
 default = []
 interface-only = []

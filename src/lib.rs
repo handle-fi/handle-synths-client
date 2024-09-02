@@ -1,7 +1,13 @@
+#[cfg(not(feature = "interface-only"))]
 pub mod environment;
 pub mod interface;
+#[cfg(not(feature = "interface-only"))]
 pub mod trade_account;
+#[cfg(not(feature = "interface-only"))]
 pub mod trade_account_user;
+#[cfg(not(feature = "interface-only"))]
 pub mod liquidity_pool;
+#[cfg(not(feature = "interface-only"))]
 pub mod client_connection;
+#[cfg(not(feature = "interface-only"))]
 pub mod utils;

@@ -31,7 +31,7 @@ impl ClientConnection {
         })
     }
 
-    pub async fn send_ws_message<S>(&self, message: S) -> Result<(), Error>
+    pub async fn send_raw_message<S>(&self, message: S) -> Result<(), Error>
     where
         S: Into<String>,
     {
@@ -47,7 +47,8 @@ impl ClientConnection {
         };
         let serialized = serde_json::to_string(&request)?;
         let rx = self.add_response_listener(id).await;
-        self.send_ws_message(&serialized).await?;
+        self.send_raw_message(&serialized).await?;
+        // TODO: add timeout error handling.
         let response = rx.await?;
         Ok(response)
     }

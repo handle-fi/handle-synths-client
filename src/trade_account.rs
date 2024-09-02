@@ -2,7 +2,7 @@ use crate::client_connection::ClientConnection;
 use crate::environment::DEPOSIT_TOKEN_DECIMALS;
 use crate::interface::events::Event;
 use crate::interface::requests::{DepositRequest, OpenAccountRequest};
-use crate::interface::{AccountId, AccountRole, Request, RequestContent, ResponseContent};
+use crate::interface::{AccountId, AccountRole, RequestContent, ResponseContent};
 use crate::user::User;
 use crate::utils::ensure_token_approval;
 use bigdecimal::BigDecimal;
@@ -86,7 +86,7 @@ impl TradeAccountClient {
         use_gasless: bool,
     ) -> eyre::Result<()> {
         let message = self
-            .get_deposit_ws_message(amount.clone(), token, use_gasless)
+            .get_deposit_ws_request(amount.clone(), token, use_gasless)
             .await?;
         if !use_gasless {
             // TODO: may not be required as it is burned/minted by the
@@ -100,7 +100,7 @@ impl TradeAccountClient {
             )
             .await;
         }
-        self.connection.send_ws_message(message).await?;
+        self.connection.send_request(message).await?;
         Ok(())
     }
 
@@ -112,30 +112,26 @@ impl TradeAccountClient {
         todo!()
     }
 
-    async fn get_deposit_ws_message(
+    async fn get_deposit_ws_request(
         &self,
         amount: BigDecimal,
         token: Address,
         use_gasless: bool,
-    ) -> eyre::Result<String> {
+    ) -> eyre::Result<RequestContent> {
         let nonce = self.user.get_nonce().await?;
         let signature: [u8; 65] = self
             .user
             .sign_role_message(U256::from(self.account_id), nonce, AccountRole::Deposit)?
             .into();
-        let request = Request::from(
-            RequestContent::Deposit(DepositRequest {
-                amount,
-                account_id: self.account_id,
-                depositor: self.user.address,
-                token,
-                signature: signature.into(),
-                use_gasless: if use_gasless { Some(true) } else { None },
-                psm_token: None,
-            }),
-            None,
-        );
-        Ok(serde_json::to_string(&request)?)
+        Ok(RequestContent::Deposit(DepositRequest {
+            amount,
+            account_id: self.account_id,
+            depositor: self.user.address,
+            token,
+            signature: signature.into(),
+            use_gasless: if use_gasless { Some(true) } else { None },
+            psm_token: None,
+        }))
     }
 }
 

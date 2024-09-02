@@ -26,6 +26,7 @@ url = "2.4.0"
 futures-channel = "0.3.28"
 bigdecimal-ethers-ext = "0.2.*"
 uuid = { version = "1.9.1", features = ["v4", "v7", "fast-rng", "serde"] }
+rand = "0.8.5"
 
 [build-dependencies]
 ethers = { version = "2.0" }

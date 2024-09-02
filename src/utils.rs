@@ -1,7 +1,7 @@
 use crate::environment::Contracts;
+use crate::interface::contract_types::IERC20;
 use ethers::addressbook::Address;
 use ethers::prelude::{LocalWallet, Signer, U256};
-use crate::interface::contract_types::IERC20;
 
 pub async fn ensure_token_approval(
     contracts: &Contracts,

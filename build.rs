@@ -3,26 +3,11 @@ use std::env;
 use std::path::PathBuf;
 
 const CONTRACTS: &[(&str, &str)] = &[
-    (
-        "./abi/Account.json",
-        "Account",
-    ),
-    (
-        "./abi/Beacon.json",
-        "Beacon",
-    ),
-    (
-        "./abi/Treasury.json",
-        "Treasury",
-    ),
-    (
-        "./abi/LiquidityPool.json",
-        "LiquidityPool",
-    ),
-    (
-        "./abi/IERC20.json",
-        "IERC20",
-    ),
+    ("./abi/Account.json", "Account"),
+    ("./abi/Beacon.json", "Beacon"),
+    ("./abi/Treasury.json", "Treasury"),
+    ("./abi/LiquidityPool.json", "LiquidityPool"),
+    ("./abi/IERC20.json", "IERC20"),
     ("./abi/RouterHpsmSynths.json", "RouterHpsmSynths"),
 ];
 

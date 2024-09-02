@@ -17,12 +17,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 
+pub mod contract_types;
 pub mod events;
 pub mod liquidity_pool;
 pub mod order;
 pub mod pair;
 pub mod requests;
-pub mod contract_types;
 
 pub const PRICE_DECIMALS: i64 = 8;
 pub const AMOUNT_DECIMALS: i64 = 18;
@@ -40,9 +40,9 @@ pub struct Request {
     /// An optional request ID that the client may set.
     /// If set, the response will contain the same ID so that the client
     /// may collect the response for that particular request.
-    id: Option<MessageId>,
+    pub id: Option<MessageId>,
     #[serde(flatten)]
-    content: RequestContent,
+    pub content: RequestContent,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

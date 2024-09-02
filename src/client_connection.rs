@@ -84,7 +84,7 @@ async fn listen_for_messages(
         let Some(listener_index) = listener_index_opt else {
             return;
         };
-        let (_, mut sender) = response_listeners.swap_remove(listener_index);
+        let (_, sender) = response_listeners.swap_remove(listener_index);
         _ = sender.send(response);
     })
     .await;

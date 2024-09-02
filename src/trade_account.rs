@@ -1,7 +1,7 @@
 use crate::client_connection::ClientConnection;
 use crate::environment::DEPOSIT_TOKEN_DECIMALS;
 use crate::interface::events::Event;
-use crate::interface::requests::{DepositRequest, OpenAccountRequest};
+use crate::interface::requests::{DepositRequest, GrantAccountUserRoleRequest, OpenAccountRequest};
 use crate::interface::{AccountId, AccountRole, RequestContent, ResponseContent};
 use crate::user::User;
 use crate::utils::ensure_token_approval;
@@ -33,7 +33,7 @@ impl TradeAccountClient {
         user: User,
         connection: ClientConnection,
     ) -> eyre::Result<Self> {
-        let message = get_open_account_request(
+        let request = get_open_account_request(
             &user,
             initial_deposit_amount.clone(),
             token,
@@ -55,7 +55,7 @@ impl TradeAccountClient {
             )
             .await;
         }
-        let response = connection.send_request(message).await?;
+        let response = connection.send_request(request).await?;
         if let Some(error) = response.content.error {
             return Err(eyre!("{error}"));
         };
@@ -85,7 +85,7 @@ impl TradeAccountClient {
         token: Address,
         use_gasless: bool,
     ) -> eyre::Result<()> {
-        let message = self
+        let request = self
             .get_deposit_ws_request(amount.clone(), token, use_gasless)
             .await?;
         if !use_gasless {
@@ -100,16 +100,18 @@ impl TradeAccountClient {
             )
             .await;
         }
-        self.connection.send_request(message).await?;
+        self.connection.send_request(request).await?;
         Ok(())
     }
 
     pub async fn grant_account_user_role(
         &self,
-        _user: Address,
-        _role: AccountRole,
+        user: Address,
+        role: AccountRole,
     ) -> eyre::Result<()> {
-        todo!()
+        let request = self.get_grant_role_request(user, role).await?;
+        self.connection.send_request(request).await?;
+        Ok(())
     }
 
     async fn get_deposit_ws_request(
@@ -132,6 +134,27 @@ impl TradeAccountClient {
             use_gasless: if use_gasless { Some(true) } else { None },
             psm_token: None,
         }))
+    }
+
+    async fn get_grant_role_request(
+        &self,
+        user: Address,
+        role: AccountRole,
+    ) -> eyre::Result<RequestContent> {
+        let nonce = self.user.get_nonce().await?;
+        let signature: [u8; 65] = self
+            .user
+            .sign_role_message(U256::from(self.account_id), nonce, AccountRole::Owner)?
+            .into();
+        Ok(RequestContent::GrantAccountUserRole(
+            GrantAccountUserRoleRequest {
+                account_id: self.account_id,
+                user,
+                role,
+                account_owner: self.user.address,
+                owner_signature: signature.into(),
+            },
+        ))
     }
 }
 

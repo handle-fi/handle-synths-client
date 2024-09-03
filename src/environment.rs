@@ -21,7 +21,7 @@ pub static ACCOUNT_MESSAGE_SCOPE: Lazy<[u8; 32]> =
 
 pub type Client = SignerMiddleware<Provider<Http>, LocalWallet>;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Contracts {
     pub account: Account<Client>,
     pub liquidity_pool: LiquidityPool<Client>,

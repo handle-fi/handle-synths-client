@@ -13,7 +13,7 @@ use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 pub type SocketWrite = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type SocketRead = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ClientConnection {
     tx: Arc<Mutex<SocketWrite>>,
     response_listeners: Arc<Mutex<Vec<(MessageId, Sender<Response>)>>>,

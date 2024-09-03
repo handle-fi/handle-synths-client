@@ -10,10 +10,11 @@ use bigdecimal_ethers_ext::BigDecimalEthersExt;
 use ethers::prelude::{Address, U256};
 use eyre::eyre;
 
+#[derive(Clone)]
 pub struct TradeAccountClient {
-    id: AccountId,
-    user: User,
-    connection: ClientConnection,
+    pub id: AccountId,
+    pub user: User,
+    pub connection: ClientConnection,
 }
 
 impl TradeAccountClient {

@@ -1,6 +1,6 @@
 use crate::client_connection::ClientConnection;
 use crate::environment::DEPOSIT_TOKEN_DECIMALS;
-use crate::interface::events::{DepositEvent, Event};
+use crate::interface::events::{DepositEvent, Event, GrantAccountUserRoleEvent};
 use crate::interface::requests::{DepositRequest, GrantAccountUserRoleRequest, OpenAccountRequest};
 use crate::interface::{AccountId, AccountRole, RequestContent, ResponseContent};
 use crate::user::User;
@@ -114,10 +114,21 @@ impl TradeAccountClient {
         &self,
         user: Address,
         role: AccountRole,
-    ) -> eyre::Result<()> {
+    ) -> eyre::Result<GrantAccountUserRoleEvent> {
         let request = self.get_grant_role_request(user, role).await?;
-        self.connection.send_request(request).await?;
-        Ok(())
+        let response = self.connection.send_request(request).await?;
+        let content = response.content().map_err(|e| eyre!(e))?;
+        let grant_role_event_opt = match &content {
+            ResponseContent::Event(e) => match e {
+                Event::GrantAccountUserRole(e) => Some(e),
+                _ => None,
+            },
+            _ => None,
+        };
+        let Some(grant_role_event) = grant_role_event_opt else {
+            return Err(eyre!("did not receive grant role event; {content:#?}"));
+        };
+        Ok(grant_role_event.clone())
     }
 
     async fn get_deposit_ws_request(
@@ -190,8 +201,9 @@ async fn get_open_account_request(
 mod test {
     use super::*;
     use crate::environment::CONFIG;
-    use ethers::prelude::LocalWallet;
+    use ethers::prelude::{LocalWallet, H160};
     use std::env;
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_account() {
@@ -206,17 +218,35 @@ mod test {
         let ws_url = &CONFIG.arbitrum_sepolia.ws;
         let user = User::connect(wallet, &rpc_url).await.unwrap();
         let connection = ClientConnection::connect(ws_url).await.unwrap();
-        let mut account =
+        // Given the user has enough funds to initially deposit to an account;
+        // When an account is requested to be opened;
+        let account =
             TradeAccountClient::open(initial_deposit, deposit_token, true, None, user, connection)
                 .await
                 .unwrap();
+        // Then the account should have been opened;
         assert!(account.id > 0);
+        // Given te user has enough funds to perform a deposit;
+        // When the deposit is requested;
         let deposit_event = account
             .deposit(BigDecimal::from(1), deposit_token, true)
             .await
             .unwrap();
+        // Then the account should have been deposited to;
         assert_eq!(deposit_event.account_id, account.id);
         assert_eq!(deposit_event.amount, BigDecimal::from(1));
         assert_eq!(deposit_event.token, deposit_token);
+        // When an account requests to grant the trade role to an address;
+        let trade_role_recipient =
+            H160::from_str("00000000000000000000000000000000deadbeef").unwrap();
+        let grant_role_event = account
+            .grant_account_user_role(trade_role_recipient, AccountRole::Trader)
+            .await
+            .unwrap();
+        // Then the response should be successful;
+        assert_eq!(grant_role_event.role, AccountRole::Trader);
+        assert_eq!(grant_role_event.user, trade_role_recipient);
+        assert_eq!(grant_role_event.account_id, account.id);
+        assert_eq!(grant_role_event.account_owner, account.user.address);
     }
 }

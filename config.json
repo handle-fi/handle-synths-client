@@ -1,7 +1,6 @@
 {
   "arbitrum-sepolia": {
     "ws": "wss://staging.trade.api.handle.fi",
-    "rpc": "https://arb-sepolia.g.alchemy.com/v2/6VWMGS0uDkY1P5MzVtHNL8PgFCvjme6Q",
     "subgraph": "https://api.studio.thegraph.com/query/50984/handle-synths-arb-sepolia/version/latest",
     "usd": "0xe5B75EcA86d4E855a65Af3D95A3aCe1679f2850d",
     "account": "0x51111c9714D06f8eCE692a402df1C36F17B0556a",
@@ -12,7 +11,6 @@
   },
   "arbitrum-one": {
     "ws": "wss://trade.api.handle.fi",
-    "rpc": "https://arb-mainnet.g.alchemy.com/v2/5Bo_0zVLbRUYcpW7EAn-sSwHv8Htmqwz",
     "subgraph": "https://subgraph.satsuma-prod.com/76eeac078c25/handle-fi/handle-synths/api",
     "usd": "0x8616E8EA83f048ab9A5eC513c9412Dd2993bcE3F",
     "account": "0x5A5C7CBA24bF276f06563f7dD43517E7a9e234Df",
@@ -23,7 +21,6 @@
   },
   "base": {
     "ws": "wss://trade.api.g3da.xyz",
-    "rpc": "https://base-mainnet.g.alchemy.com/v2/r_VB1K-QyxDicigKedOZ2C0XFabKJpbO",
     "subgraph": "https://subgraph.satsuma-prod.com/74cffd796027/gtrader--787933/gtrader-subgraph/api",
     "usd": "0xe5F396Fe5B1539789E47734d77AB5c39A5C84BA5",
     "account": "0xA0F452f5eb6669e7a4A0d8c290C358D11264b598",

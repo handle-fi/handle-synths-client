@@ -207,7 +207,7 @@ mod test {
 
     #[tokio::test]
     async fn test_account() {
-        dotenv::dotenv().unwrap();
+        _ = dotenv::dotenv();
         let wallet = env::var("TEST_PRIVATE_KEY")
             .unwrap()
             .parse::<LocalWallet>()

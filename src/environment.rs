@@ -39,6 +39,7 @@ pub struct Config {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkConfig {
+    pub ws: String,
     pub subgraph: String,
     /// The fxUSD (or equivalent, e.g. mock USD for testnet) token.
     pub usd: Address,

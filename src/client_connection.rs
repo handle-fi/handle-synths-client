@@ -20,8 +20,8 @@ pub struct ClientConnection {
 }
 
 impl ClientConnection {
-    pub async fn connect(url: &str) -> eyre::Result<Self> {
-        let (ws_stream, _) = connect_async(url).await?;
+    pub async fn connect(ws_url: &str) -> eyre::Result<Self> {
+        let (ws_stream, _) = connect_async(ws_url).await?;
         let (tx, rx) = ws_stream.split();
         let response_listeners = Arc::new(Mutex::new(Vec::new()));
         tokio::spawn(listen_for_messages(rx, response_listeners.clone()));

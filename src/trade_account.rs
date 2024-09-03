@@ -17,7 +17,7 @@ pub struct TradeAccountClient {
 }
 
 impl TradeAccountClient {
-    pub fn new(user: User, account_id: AccountId, connection: ClientConnection) -> Self {
+    pub fn from_existing(account_id: AccountId, user: User, connection: ClientConnection) -> Self {
         Self {
             user,
             account_id,
@@ -178,4 +178,32 @@ async fn get_open_account_request(
         use_gasless: if use_gasless { Some(true) } else { None },
         psm_token: None,
     }))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::environment::CONFIG;
+    use ethers::prelude::LocalWallet;
+    use std::env;
+
+    #[tokio::test]
+    async fn test_account() {
+        dotenv::dotenv().unwrap();
+        let wallet = env::var("TEST_PRIVATE_KEY")
+            .unwrap()
+            .parse::<LocalWallet>()
+            .unwrap();
+        let rpc_url = env::var("TEST_RPC_URL").unwrap();
+        let initial_deposit = BigDecimal::from(1);
+        let deposit_token = CONFIG.arbitrum_sepolia.usd;
+        let ws_url = &CONFIG.arbitrum_sepolia.ws;
+        let user = User::connect(wallet, &rpc_url).await.unwrap();
+        let connection = ClientConnection::connect(ws_url).await.unwrap();
+        let account =
+            TradeAccountClient::open(initial_deposit, deposit_token, true, None, user, connection)
+                .await
+                .unwrap();
+        assert!(account.account_id > 0);
+    }
 }

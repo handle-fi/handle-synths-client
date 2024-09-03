@@ -14,7 +14,7 @@ pub struct User {
 }
 
 impl User {
-    pub async fn new(signer: LocalWallet, rpc_url: &str) -> eyre::Result<Self> {
+    pub async fn connect(signer: LocalWallet, rpc_url: &str) -> eyre::Result<Self> {
         let address = signer.address();
         let contracts = Contracts::connect(signer.clone(), rpc_url).await?;
         Ok(Self {

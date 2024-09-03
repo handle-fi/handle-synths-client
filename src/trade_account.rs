@@ -1,6 +1,6 @@
 use crate::client_connection::ClientConnection;
 use crate::environment::DEPOSIT_TOKEN_DECIMALS;
-use crate::interface::events::Event;
+use crate::interface::events::{DepositEvent, Event};
 use crate::interface::requests::{DepositRequest, GrantAccountUserRoleRequest, OpenAccountRequest};
 use crate::interface::{AccountId, AccountRole, RequestContent, ResponseContent};
 use crate::user::User;
@@ -11,16 +11,16 @@ use ethers::prelude::{Address, U256};
 use eyre::eyre;
 
 pub struct TradeAccountClient {
+    id: AccountId,
     user: User,
-    account_id: AccountId,
     connection: ClientConnection,
 }
 
 impl TradeAccountClient {
     pub fn from_existing(account_id: AccountId, user: User, connection: ClientConnection) -> Self {
         Self {
+            id: account_id,
             user,
-            account_id,
             connection,
         }
     }
@@ -56,12 +56,7 @@ impl TradeAccountClient {
             .await;
         }
         let response = connection.send_request(request).await?;
-        if let Some(error) = response.content.error {
-            return Err(eyre!("{error}"));
-        };
-        let Some(content) = response.content.result else {
-            return Err(eyre!("no response content received"));
-        };
+        let content = response.content().map_err(|e| eyre!(e))?;
         let account_id_opt = match content {
             ResponseContent::Event(e) => match e {
                 Event::OpenAccount(info) => Some(info.account_id),
@@ -73,8 +68,8 @@ impl TradeAccountClient {
             return Err(eyre!("no account received"));
         };
         Ok(Self {
+            id: account_id,
             user,
-            account_id,
             connection,
         })
     }
@@ -84,7 +79,7 @@ impl TradeAccountClient {
         amount: BigDecimal,
         token: Address,
         use_gasless: bool,
-    ) -> eyre::Result<()> {
+    ) -> eyre::Result<DepositEvent> {
         let request = self
             .get_deposit_ws_request(amount.clone(), token, use_gasless)
             .await?;
@@ -100,8 +95,19 @@ impl TradeAccountClient {
             )
             .await;
         }
-        self.connection.send_request(request).await?;
-        Ok(())
+        let response = self.connection.send_request(request).await?;
+        let content = response.content().map_err(|e| eyre!(e))?;
+        let deposit_event_opt = match &content {
+            ResponseContent::Event(e) => match e {
+                Event::Deposit(e) => Some(e),
+                _ => None,
+            },
+            _ => None,
+        };
+        let Some(deposit_event) = deposit_event_opt else {
+            return Err(eyre!("did not receive deposit event; {content:#?}"));
+        };
+        Ok(deposit_event.clone())
     }
 
     pub async fn grant_account_user_role(
@@ -123,11 +129,11 @@ impl TradeAccountClient {
         let nonce = self.user.get_nonce().await?;
         let signature: [u8; 65] = self
             .user
-            .sign_role_message(U256::from(self.account_id), nonce, AccountRole::Deposit)?
+            .sign_role_message(U256::from(self.id), nonce, AccountRole::Deposit)?
             .into();
         Ok(RequestContent::Deposit(DepositRequest {
             amount,
-            account_id: self.account_id,
+            account_id: self.id,
             depositor: self.user.address,
             token,
             signature: signature.into(),
@@ -144,11 +150,11 @@ impl TradeAccountClient {
         let nonce = self.user.get_nonce().await?;
         let signature: [u8; 65] = self
             .user
-            .sign_role_message(U256::from(self.account_id), nonce, AccountRole::Owner)?
+            .sign_role_message(U256::from(self.id), nonce, AccountRole::Owner)?
             .into();
         Ok(RequestContent::GrantAccountUserRole(
             GrantAccountUserRoleRequest {
-                account_id: self.account_id,
+                account_id: self.id,
                 user,
                 role,
                 account_owner: self.user.address,
@@ -200,10 +206,17 @@ mod test {
         let ws_url = &CONFIG.arbitrum_sepolia.ws;
         let user = User::connect(wallet, &rpc_url).await.unwrap();
         let connection = ClientConnection::connect(ws_url).await.unwrap();
-        let account =
+        let mut account =
             TradeAccountClient::open(initial_deposit, deposit_token, true, None, user, connection)
                 .await
                 .unwrap();
-        assert!(account.account_id > 0);
+        assert!(account.id > 0);
+        let deposit_event = account
+            .deposit(BigDecimal::from(1), deposit_token, true)
+            .await
+            .unwrap();
+        assert_eq!(deposit_event.account_id, account.id);
+        assert_eq!(deposit_event.amount, BigDecimal::from(1));
+        assert_eq!(deposit_event.token, deposit_token);
     }
 }

@@ -159,6 +159,16 @@ impl Response {
             (Err("invalid response".to_string()), self.id)
         }
     }
+
+    pub fn content(self) -> Result<ResponseContent, String> {
+        if let Some(error) = self.content.error {
+            return Err(error);
+        };
+        let Some(content) = self.content.result else {
+            return Err("no response content or error received".to_owned());
+        };
+        Ok(content)
+    }
 }
 
 impl Request {

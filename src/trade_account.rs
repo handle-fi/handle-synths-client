@@ -1,5 +1,5 @@
 use crate::client_connection::ClientConnection;
-use crate::environment::DEPOSIT_TOKEN_DECIMALS;
+use crate::environment::{NetworkConfig, DEPOSIT_TOKEN_DECIMALS, CONFIG};
 use crate::interface::events::{DepositEvent, Event, GrantAccountUserRoleEvent};
 use crate::interface::requests::{DepositRequest, GrantAccountUserRoleRequest, OpenAccountRequest};
 use crate::interface::{AccountId, AccountRole, RequestContent, ResponseContent};
@@ -9,6 +9,7 @@ use bigdecimal::BigDecimal;
 use bigdecimal_ethers_ext::BigDecimalEthersExt;
 use ethers::prelude::{Address, U256};
 use eyre::eyre;
+use std::str::FromStr;
 
 #[derive(Clone)]
 pub struct TradeAccountClient {
@@ -111,6 +112,52 @@ impl TradeAccountClient {
         Ok(deposit_event.clone())
     }
 
+    pub async fn deposit_psm(
+        &self,
+        amount: BigDecimal,
+        token: Address,
+    ) -> eyre::Result<DepositEvent> {
+        let request = self
+            .get_deposit_psm_ws_request(amount.clone(), token)
+            .await?;
+
+        let network_config = get_network_config(self.user.contracts.account.address()).await?;
+        let token_transfer_proxy = network_config.token_transfer_proxy;
+        let trade_account_contract = Address::from_str(&network_config.account)?;
+        ensure_token_approval(
+            &self.user.contracts,
+            &self.user.signer,
+            // TODO: Decimals need to be fetched dynamically, because some
+            // PSM tokens are 6 decimals, like USDC.
+            amount.to_ethers_u256(DEPOSIT_TOKEN_DECIMALS).unwrap(),
+            token,
+            token_transfer_proxy,
+        )
+        .await;
+        ensure_token_approval(
+            &self.user.contracts,
+            &self.user.signer,
+            amount.to_ethers_u256(DEPOSIT_TOKEN_DECIMALS).unwrap(),
+            network_config.usd,
+            trade_account_contract,
+        )
+        .await;
+
+        let response = self.connection.send_request(request).await?;
+        let content = response.content().map_err(|e| eyre!(e))?;
+        let deposit_event_opt = match &content {
+            ResponseContent::Event(e) => match e {
+                Event::Deposit(e) => Some(e),
+                _ => None,
+            },
+            _ => None,
+        };
+        let Some(deposit_event) = deposit_event_opt else {
+            return Err(eyre!("did not receive deposit event; {content:#?}"));
+        };
+        Ok(deposit_event.clone())
+    }
+
     pub async fn grant_account_user_role(
         &self,
         user: Address,
@@ -154,6 +201,30 @@ impl TradeAccountClient {
         }))
     }
 
+    async fn get_deposit_psm_ws_request(
+        &self,
+        amount: BigDecimal,
+        token: Address,
+    ) -> eyre::Result<RequestContent> {
+        let nonce = self.user.get_nonce().await?;
+        let signature: [u8; 65] = self
+            .user
+            .sign_role_message(U256::from(self.id), nonce, AccountRole::Deposit)?
+            .into();
+
+        let network_config = get_network_config(self.user.contracts.account.address()).await?;
+        let usd_token = network_config.usd;
+        Ok(RequestContent::Deposit(DepositRequest {
+            amount,
+            account_id: self.id,
+            depositor: self.user.address,
+            token: usd_token,
+            signature: signature.into(),
+            use_gasless: None,
+            psm_token: Some(token),
+        }))
+    }
+
     async fn get_grant_role_request(
         &self,
         user: Address,
@@ -174,6 +245,19 @@ impl TradeAccountClient {
             },
         ))
     }
+}
+
+async fn get_network_config(account_address: Address) -> eyre::Result<NetworkConfig> {
+    if Address::from_str(&CONFIG.arbitrum_sepolia.account).map_or(false, |addr| addr == account_address) {
+        return Ok(CONFIG.arbitrum_sepolia.clone());
+    }
+    if Address::from_str(&CONFIG.arbitrum_one.account).map_or(false, |addr| addr == account_address) {
+        return Ok(CONFIG.arbitrum_one.clone());
+    }
+    if Address::from_str(&CONFIG.base.account).map_or(false, |addr| addr == account_address) {
+        return Ok(CONFIG.base.clone());
+    }
+    Err(eyre!("Unsupported network for account: {}", account_address))
 }
 
 async fn get_open_account_request(

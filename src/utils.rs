@@ -19,6 +19,7 @@ pub async fn ensure_token_approval(
     if current_approval >= amount {
         return;
     };
+
     let call = token.approve(target, amount);
-    call.send().await.unwrap();
+    call.send().await.unwrap().await.unwrap();
 }

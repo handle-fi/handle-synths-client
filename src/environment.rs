@@ -48,6 +48,7 @@ pub struct NetworkConfig {
     pub treasury: String,
     pub liquidity_token_factory: String,
     pub liquidity_pool: String,
+    pub token_transfer_proxy: Address,
 }
 
 impl Config {

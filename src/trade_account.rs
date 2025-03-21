@@ -127,6 +127,8 @@ impl TradeAccountClient {
         ensure_token_approval(
             &self.user.contracts,
             &self.user.signer,
+            // TODO: Decimals need to be fetched dynamically, because some
+            // PSM tokens are 6 decimals, like USDC.
             amount.to_ethers_u256(DEPOSIT_TOKEN_DECIMALS).unwrap(),
             token,
             token_transfer_proxy,

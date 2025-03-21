@@ -1,5 +1,5 @@
 use crate::client_connection::ClientConnection;
-use crate::environment::{NetworkConfig, DEPOSIT_TOKEN_DECIMALS};
+use crate::environment::{NetworkConfig, DEPOSIT_TOKEN_DECIMALS, CONFIG};
 use crate::interface::events::{DepositEvent, Event, GrantAccountUserRoleEvent};
 use crate::interface::requests::{DepositRequest, GrantAccountUserRoleRequest, OpenAccountRequest};
 use crate::interface::{AccountId, AccountRole, RequestContent, ResponseContent};
@@ -17,11 +17,7 @@ pub struct TradeAccountClient {
     pub user: User,
     pub connection: ClientConnection,
 }
-pub enum Network {
-    ArbitrumSepolia,
-    ArbitrumOne,
-    Base,
-}
+
 impl TradeAccountClient {
     pub fn from_existing(account_id: AccountId, user: User, connection: ClientConnection) -> Self {
         Self {
@@ -250,11 +246,16 @@ impl TradeAccountClient {
 }
 
 async fn get_network_config(account_address: Address) -> eyre::Result<NetworkConfig> {
-    match determine_account_network(account_address)? {
-        Network::ArbitrumSepolia => Ok(crate::environment::CONFIG.arbitrum_sepolia.clone()),
-        Network::ArbitrumOne => Ok(crate::environment::CONFIG.arbitrum_one.clone()),
-        Network::Base => Ok(crate::environment::CONFIG.base.clone()),
+    if Address::from_str(&CONFIG.arbitrum_sepolia.account).map_or(false, |addr| addr == account_address) {
+        return Ok(CONFIG.arbitrum_sepolia.clone());
     }
+    if Address::from_str(&CONFIG.arbitrum_one.account).map_or(false, |addr| addr == account_address) {
+        return Ok(CONFIG.arbitrum_one.clone());
+    }
+    if Address::from_str(&CONFIG.base.account).map_or(false, |addr| addr == account_address) {
+        return Ok(CONFIG.base.clone());
+    }
+    Err(eyre!("Unsupported network for account: {}", account_address))
 }
 
 async fn get_open_account_request(
@@ -279,30 +280,6 @@ async fn get_open_account_request(
     }))
 }
 
-fn determine_account_network(account_address: Address) -> eyre::Result<Network> {
-    if let Ok(addr) = Address::from_str(&crate::environment::CONFIG.arbitrum_sepolia.account) {
-        if addr == account_address {
-            return Ok(Network::ArbitrumSepolia);
-        }
-    }
-
-    if let Ok(addr) = Address::from_str(&crate::environment::CONFIG.arbitrum_one.account) {
-        if addr == account_address {
-            return Ok(Network::ArbitrumOne);
-        }
-    }
-
-    if let Ok(addr) = Address::from_str(&crate::environment::CONFIG.base.account) {
-        if addr == account_address {
-            return Ok(Network::Base);
-        }
-    }
-
-    Err(eyre!(
-        "Unsupported network for account: {}",
-        account_address
-    ))
-}
 #[cfg(test)]
 mod test {
     use super::*;

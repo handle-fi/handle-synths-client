@@ -1,5 +1,5 @@
 use crate::client_connection::ClientConnection;
-use crate::environment::DEPOSIT_TOKEN_DECIMALS;
+use crate::environment::{NetworkConfig, DEPOSIT_TOKEN_DECIMALS};
 use crate::interface::events::{DepositEvent, Event, GrantAccountUserRoleEvent};
 use crate::interface::requests::{DepositRequest, GrantAccountUserRoleRequest, OpenAccountRequest};
 use crate::interface::{AccountId, AccountRole, RequestContent, ResponseContent};
@@ -17,7 +17,11 @@ pub struct TradeAccountClient {
     pub user: User,
     pub connection: ClientConnection,
 }
-
+pub enum Network {
+    ArbitrumSepolia,
+    ArbitrumOne,
+    Base,
+}
 impl TradeAccountClient {
     pub fn from_existing(account_id: AccountId, user: User, connection: ClientConnection) -> Self {
         Self {
@@ -121,7 +125,9 @@ impl TradeAccountClient {
             .get_deposit_psm_ws_request(amount.clone(), token)
             .await?;
 
-        let token_transfer_proxy = get_token_transfer_proxy_for_account(self.user.contracts.account.address())?;   
+        let network_config = get_network_config(self.user.contracts.account.address()).await?;
+        let token_transfer_proxy = network_config.token_transfer_proxy;
+        let trade_account_contract = Address::from_str(&network_config.account)?;
         ensure_token_approval(
             &self.user.contracts,
             &self.user.signer,
@@ -130,7 +136,15 @@ impl TradeAccountClient {
             token_transfer_proxy,
         )
         .await;
-        
+        ensure_token_approval(
+            &self.user.contracts,
+            &self.user.signer,
+            amount.to_ethers_u256(DEPOSIT_TOKEN_DECIMALS).unwrap(),
+            network_config.usd,
+            trade_account_contract,
+        )
+        .await;
+
         let response = self.connection.send_request(request).await?;
         let content = response.content().map_err(|e| eyre!(e))?;
         let deposit_event_opt = match &content {
@@ -199,8 +213,9 @@ impl TradeAccountClient {
             .user
             .sign_role_message(U256::from(self.id), nonce, AccountRole::Deposit)?
             .into();
-        
-        let usd_token = get_usd_token_for_account(self.user.contracts.account.address())?;
+
+        let network_config = get_network_config(self.user.contracts.account.address()).await?;
+        let usd_token = network_config.usd;
         Ok(RequestContent::Deposit(DepositRequest {
             amount,
             account_id: self.id,
@@ -234,6 +249,14 @@ impl TradeAccountClient {
     }
 }
 
+async fn get_network_config(account_address: Address) -> eyre::Result<NetworkConfig> {
+    match determine_account_network(account_address)? {
+        Network::ArbitrumSepolia => Ok(crate::environment::CONFIG.arbitrum_sepolia.clone()),
+        Network::ArbitrumOne => Ok(crate::environment::CONFIG.arbitrum_one.clone()),
+        Network::Base => Ok(crate::environment::CONFIG.base.clone()),
+    }
+}
+
 async fn get_open_account_request(
     user: &User,
     amount: BigDecimal,
@@ -256,50 +279,30 @@ async fn get_open_account_request(
     }))
 }
 
-fn get_usd_token_for_account(account_address: Address) -> eyre::Result<Address> {
+fn determine_account_network(account_address: Address) -> eyre::Result<Network> {
     if let Ok(addr) = Address::from_str(&crate::environment::CONFIG.arbitrum_sepolia.account) {
         if addr == account_address {
-            return Ok(crate::environment::CONFIG.arbitrum_sepolia.usd);
+            return Ok(Network::ArbitrumSepolia);
         }
     }
-    
+
     if let Ok(addr) = Address::from_str(&crate::environment::CONFIG.arbitrum_one.account) {
         if addr == account_address {
-            return Ok(crate::environment::CONFIG.arbitrum_one.usd);
+            return Ok(Network::ArbitrumOne);
         }
     }
-    
+
     if let Ok(addr) = Address::from_str(&crate::environment::CONFIG.base.account) {
         if addr == account_address {
-            return Ok(crate::environment::CONFIG.base.usd);
+            return Ok(Network::Base);
         }
     }
-    
-    Err(eyre!("Unsupported network for account: {}", account_address))
-}
 
-fn get_token_transfer_proxy_for_account(account_address: Address) -> eyre::Result<Address> {
-    if let Ok(addr) = Address::from_str(&crate::environment::CONFIG.arbitrum_sepolia.account) {
-        if addr == account_address {
-            return Ok(crate::environment::CONFIG.arbitrum_sepolia.token_transfer_proxy);
-        }
-    }
-    
-    if let Ok(addr) = Address::from_str(&crate::environment::CONFIG.arbitrum_one.account) {
-        if addr == account_address {
-            return Ok(crate::environment::CONFIG.arbitrum_one.token_transfer_proxy);
-        }
-    }
-    
-    if let Ok(addr) = Address::from_str(&crate::environment::CONFIG.base.account) {
-        if addr == account_address {
-            return Ok(crate::environment::CONFIG.base.token_transfer_proxy);
-        }
-    }
-    
-    Err(eyre!("Unsupported network for account: {}", account_address))
+    Err(eyre!(
+        "Unsupported network for account: {}",
+        account_address
+    ))
 }
-
 #[cfg(test)]
 mod test {
     use super::*;
